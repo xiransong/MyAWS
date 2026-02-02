@@ -1,276 +1,176 @@
-# MyAWS — Calm EC2 + Persistent EBS Workflow (v1)
+# MyAWS — Minimal, Calm EC2 + GPU Docker Workflow
 
-This repository contains **battle-tested scripts** for a clean, safe, and reproducible AWS EC2 workflow built around one core idea:
+This repository documents a **simple, robust AWS EC2 workflow** for research and experimentation.
+The goal is to make infrastructure *disappear* so you can focus on actual work.
 
-> **EC2 instances are disposable. EBS volumes are long-lived.**
-
-The workflow is intentionally boring, explicit, and calm — designed for research work where infrastructure should *disappear* once it’s correct.
+> **EC2 instances are disposable. One EBS volume is persistent.**
 
 ---
 
-## Mental Model (read first)
+## Mental Model
 
 * You own **one persistent EBS volume** (your workspace)
-* You can attach it to **any EC2 instance** (CPU or GPU)
-* EC2 instances can be terminated freely
-* You **never format the EBS again** after Phase 1
-
-Think of the EBS as a **portable external hard drive** that follows you across machines.
-
----
-
-## Repository Structure
-
-```text
-MyAWS/
-├── phase1a_create_scratch_ebs_final.sh
-├── phase1b_format_scratch_ebs_final.sh
-├── phase2a_launch_and_attach_v2.sh
-├── phase2b_instance_setup_final.sh
-├── phase3a_install_docker_optional.sh
-├── phase3b_enable_gpu_docker_optional.sh
-└── README.md
-```
+* EC2 instances (CPU or GPU) can be launched and terminated freely
+* All important state lives on the EBS
+* Docker uses the EBS for storage
+* GPU support is provided by the AMI, not by manual driver installs
 
 ---
 
-## Recommended AMIs (IMPORTANT)
-
-Choose the AMI based on **hardware**, not preference.
+## Recommended AMIs
 
 ### CPU instances
 
-Use a plain Ubuntu LTS:
-
 * **Ubuntu Server 22.04 LTS (x86_64)**
 
-Why:
+Use this for:
 
-* minimal
-* fast boot
-* no unnecessary GPU stack
-* perfect for setup, debugging, and CPU-only work
+* setup
+* debugging
+* CPU-only development
 
 ---
 
-### GPU instances (RECOMMENDED)
-
-Use the AWS-maintained GPU AMI:
+### GPU instances (recommended)
 
 * **Deep Learning Base AMI with Single CUDA (Ubuntu 22.04, x86_64)**
 
-Why this is ideal:
+Why:
 
-* NVIDIA driver + CUDA already installed
+* NVIDIA driver preinstalled
+* CUDA ready
+* Docker preinstalled
 * `nvidia-smi` works out of the box
-* minimal (no forced Conda environments)
-* designed for Docker-first workflows
-* avoids manual driver installation entirely
+* No manual driver installation
 
-⚠️ **Do NOT use ARM64 AMIs** with `g4`, `g5`, `p4`, or `p5` instances.
+⚠️ Do **not** use ARM64 AMIs with GPU instances.
 
 ---
 
-## Final Storage Layout (inside EC2)
+## Storage Layout (inside EC2)
 
-After Phase 2-b completes:
+After setup:
 
 ```text
-/home/ubuntu/scratch        ← persistent 100GB EBS
-├── repos/                  ← git repositories
+/home/ubuntu/scratch        ← persistent EBS
+├── repos/                  ← source code
 ├── datasets/               ← datasets
 ├── outputs/                ← experiment outputs
-├── containers/             ← container files (.sif, etc.)
-├── docker/                 ← Docker data-root
-└── apptainer-cache/        ← (optional) Apptainer cache
+└── docker/                 ← Docker data-root (root-owned)
 ```
 
 ---
 
-## Phase 1 — One-Time Disk Bootstrap
+## Phase 1 — One-Time Disk Setup
 
-> **Run exactly once per persistent EBS volume.**
+> **Run once per EBS volume. Never again.**
 
-### Phase 1-a — Create the persistent EBS
-
-**(Run on your MacBook)**
+### Phase 1-a: Create the persistent EBS (MacBook)
 
 ```bash
 bash phase1a_create_scratch_ebs_final.sh
 ```
 
-What this script does:
-
-* prompts for a **volume tag name**
-* launches a cheap CPU EC2 instance
-* creates:
-
-  * a small root EBS (temporary)
-  * a 100GB scratch EBS (**persistent**)
-* tags the scratch EBS
-* prints:
-
-  * instance ID
-  * public IPv4
-  * **volume ID (SAVE THIS)**
-
-Record the volume ID somewhere safe:
-
-```text
-vol-0xxxxxxxxxxxxxxxx
-```
+* Creates a persistent EBS
+* Tags it
+* Prints the **volume ID** (save it)
 
 ---
 
-### Phase 1-b — Format the EBS (DANGEROUS)
-
-**(Run inside the temporary EC2)**
+### Phase 1-b: Format the EBS (inside EC2)
 
 ```bash
 bash phase1b_format_scratch_ebs_final.sh
 ```
 
-What this script does:
-
-* prompts for the **volume ID**
-* resolves the real Linux device via `/dev/disk/by-id`
-* shows a **dry-run confirmation**
-* formats the volume as `ext4`
-
-⚠️ **This DESTROYS all data on the volume.**
-⚠️ **Run exactly once in the volume’s lifetime.**
-
-After this step:
-
-* detach the volume (or just terminate the instance)
-* terminate the CPU instance
-
-Phase 1 is now complete forever.
+⚠️ **Destroys all data on the volume.**
+Run exactly once in the volume’s lifetime.
 
 ---
 
 ## Phase 2 — Daily Workflow (Reuse the Disk)
 
-> **This is what you do every time you want to work.**
-
-### Phase 2-a — Launch EC2 and attach EBS
-
-**(Run on your MacBook)**
+### Phase 2-a: Launch EC2 and attach EBS (MacBook)
 
 ```bash
 bash phase2a_launch_and_attach_v2.sh
 ```
 
-What this script does:
-
-* prompts for the **volume ID**
-* launches a new EC2 instance (CPU or GPU)
-* waits for it to be running
-* attaches the EBS
-* prints:
-
-  * instance ID
-  * public IPv4
-
-Next:
-
-```bash
-ssh ubuntu@<PUBLIC_IP>
-```
+* Launches EC2
+* Attaches the EBS
+* Prints public IPv4
 
 ---
 
-### Phase 2-b — Mount the EBS safely
-
-**(Run inside EC2)**
+### Phase 2-b: Mount the EBS safely (inside EC2)
 
 ```bash
 bash phase2b_instance_setup_final.sh
 ```
 
-What this script does:
+* Resolves device via `/dev/disk/by-id`
+* Shows a dry-run
+* Mounts at `/home/ubuntu/scratch`
+* Adds `/etc/fstab` entry
 
-* prompts for **volume ID**
-* resolves the real block device via `/dev/disk/by-id`
-* shows a **dry-run summary**
-* mounts the EBS at `/home/ubuntu/scratch`
-* adds `/etc/fstab` entry (UUID-based)
-* fixes ownership
-* creates standard directories
-
-This script is **safe to re-run**.
+Safe to re-run.
 
 ---
 
-## Phase 3 — Docker Tooling (OPTIONAL)
+## Phase 3 — Docker (GPU AMI)
 
-Phase 3 is **only for users who want Docker**.
+> Assumes Docker and GPU support are already present (GPU AMI).
 
-### Phase 3-a — Docker (CPU)
-
-Install Docker and move Docker storage onto the persistent EBS.
+### Phase 3: Configure Docker paths
 
 ```bash
-bash phase3a_install_docker_optional.sh
+bash phase3_configure_docker_paths.sh
 ```
 
-Use this when:
+* Moves Docker data-root to `/home/ubuntu/scratch/docker`
+* Restarts Docker
 
-* you want Docker on CPU or GPU instances
-* you want images to persist across EC2 restarts
-
----
-
-### Phase 3-b — Docker (GPU)
-
-Enable GPU support for Docker.
+Verification:
 
 ```bash
-bash phase3b_enable_gpu_docker_optional.sh
+docker info --format '{{.DockerRootDir}}'
 ```
 
-Prerequisites:
-
-* GPU EC2 instance
-* GPU AMI (Deep Learning Base AMI)
-* `nvidia-smi` works
-
-If you only need CPU Docker, **do not run this step**.
-
----
-
-## Safety Rules (memorize these)
+Expected:
 
 ```text
-✔ Format (mkfs) → ONCE EVER
-✔ Volume ID → single source of truth
-✔ Mount via /dev/disk/by-id
-✔ Dry-run before destructive actions
-✘ Never trust nvmeXn1 numbering
-✘ Never re-format a disk with data
+/home/ubuntu/scratch/docker
 ```
 
 ---
 
-## Why This Workflow Works
+## GPU Docker Verification
 
-* EC2 instances are disposable
-* EBS holds everything important
-* CPU and GPU paths are explicit
-* Docker is optional, not mandatory
-* GPU enablement is isolated
-* Nothing depends on hidden state
+Run once per instance:
+
+```bash
+docker run --rm --gpus all \
+  nvidia/cuda:12.2.0-base-ubuntu22.04 nvidia-smi
+```
+
+If this works, **GPU Docker is fully functional**.
+
+---
+
+## Design Principles (Important)
+
+* Format disks once
+* Use volume ID as the source of truth
+* Mount via `/dev/disk/by-id`
+* Trust GPU AMIs
+* Do not manually install NVIDIA drivers
+* Do not change Docker directory permissions
 
 ---
 
 ## Final Note
 
-If something feels confusing:
-
-* stop
-* run `lsblk`
-* read the dry-run output
-
-Confusion is a signal to improve scripts — not to memorize more commands.
+Once GPU Docker works, **stop touching infrastructure**.
+Build images, run experiments, push artifacts, terminate EC2.
 
 Happy hacking 🚀

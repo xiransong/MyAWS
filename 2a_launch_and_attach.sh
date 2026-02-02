@@ -6,12 +6,14 @@ AWS_PROFILE=xiran-ec2
 AWS_REGION=us-east-1
 AVAILABILITY_ZONE=us-east-1a
 
-AMI_ID=ami-0030e4319cbf4dbf2     # Ubuntu 22.04
+# AMI_ID=ami-0030e4319cbf4dbf2     # Ubuntu 22.04 (ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-20251212)
+AMI_ID=ami-0252d9c82e6b8fa85     # Deep Learning Base AMI with Single CUDA (Ubuntu 22.04) 20260130
+
 INSTANCE_TYPE=g4dn.xlarge
 KEY_NAME=banglab
 SECURITY_GROUP=banglab
 
-ROOT_SIZE_GB=30
+ROOT_SIZE_GB=100
 # ==========================
 
 echo "Enter the persistent EBS Volume ID (e.g. vol-0abc123...):"
