@@ -1,266 +1,276 @@
-# MyAWS
+# MyAWS — Calm EC2 + Persistent EBS Workflow (v1)
 
-A **calm, reproducible AWS EC2 workflow** for research and development.
+This repository contains **battle-tested scripts** for a clean, safe, and reproducible AWS EC2 workflow built around one core idea:
 
-This repository documents and automates a simple idea:
+> **EC2 instances are disposable. EBS volumes are long-lived.**
 
-> **EC2 instances are disposable. EBS volumes are long‑lived.**
-
-We use:
-
-* a **small root EBS** for the OS (recreated every time)
-* a **persistent 100 GB EBS** as our personal workspace
-* optional **Docker / Apptainer** stored on that persistent disk
-
-This README is written for **future us and lab mates** who want something that:
-
-* is easy to reason about
-* avoids accidental data loss
-* works equally well for EC2 dev and HPC deployment
+The workflow is intentionally boring, explicit, and calm — designed for research work where infrastructure should *disappear* once it’s correct.
 
 ---
 
-## Mental Model (read this first)
+## Mental Model (read first)
 
-* EC2 instances come and go
-* One EBS volume is *your disk*
-* You attach that disk to any EC2 you like
-* You never re‑format it after the first time
+* You own **one persistent EBS volume** (your workspace)
+* You can attach it to **any EC2 instance** (CPU or GPU)
+* EC2 instances can be terminated freely
+* You **never format the EBS again** after Phase 1
 
-Think of the EBS as a **portable hard drive**.
+Think of the EBS as a **portable external hard drive** that follows you across machines.
 
 ---
 
-## Repository Contents
+## Repository Structure
 
 ```text
 MyAWS/
-├── phase1a_create_scratch_ebs.sh      # MacBook: create + tag persistent EBS
-├── phase1b_format_scratch_ebs.sh      # EC2: one-time filesystem setup
-├── phase2a_launch_and_attach.sh       # MacBook: launch EC2 + attach EBS
-├── phase2b_instance_setup.sh          # EC2: mount EBS, setup dirs, Docker, Apptainer
-└── README.md                          # this file
+├── phase1a_create_scratch_ebs_final.sh
+├── phase1b_format_scratch_ebs_final.sh
+├── phase2a_launch_and_attach_v2.sh
+├── phase2b_instance_setup_final.sh
+├── phase3a_install_docker_optional.sh
+├── phase3b_enable_gpu_docker_optional.sh
+└── README.md
 ```
 
 ---
 
-## Storage Layout (final state)
+## Recommended AMIs (IMPORTANT)
 
-Inside the EC2 instance, after setup:
+Choose the AMI based on **hardware**, not preference.
+
+### CPU instances
+
+Use a plain Ubuntu LTS:
+
+* **Ubuntu Server 22.04 LTS (x86_64)**
+
+Why:
+
+* minimal
+* fast boot
+* no unnecessary GPU stack
+* perfect for setup, debugging, and CPU-only work
+
+---
+
+### GPU instances (RECOMMENDED)
+
+Use the AWS-maintained GPU AMI:
+
+* **Deep Learning Base AMI with Single CUDA (Ubuntu 22.04, x86_64)**
+
+Why this is ideal:
+
+* NVIDIA driver + CUDA already installed
+* `nvidia-smi` works out of the box
+* minimal (no forced Conda environments)
+* designed for Docker-first workflows
+* avoids manual driver installation entirely
+
+⚠️ **Do NOT use ARM64 AMIs** with `g4`, `g5`, `p4`, or `p5` instances.
+
+---
+
+## Final Storage Layout (inside EC2)
+
+After Phase 2-b completes:
 
 ```text
-/home/ubuntu/scratch      ← persistent 100 GB EBS
-├── repos/                ← git repos
-├── datasets/             ← datasets
-├── outputs/              ← experiment outputs
-├── containers/           ← Apptainer .sif files
-├── docker/               ← Docker data-root
-└── apptainer-cache/      ← Apptainer cache
-```
-
-Optional (future use):
-
-```text
-/mnt/nvme                 ← instance NVMe SSD (ephemeral)
+/home/ubuntu/scratch        ← persistent 100GB EBS
+├── repos/                  ← git repositories
+├── datasets/               ← datasets
+├── outputs/                ← experiment outputs
+├── containers/             ← container files (.sif, etc.)
+├── docker/                 ← Docker data-root
+└── apptainer-cache/        ← (optional) Apptainer cache
 ```
 
 ---
 
-## Phase 1 — One-Time Bootstrap (create the disk)
+## Phase 1 — One-Time Disk Bootstrap
 
-> **You do this exactly once per persistent EBS.**
+> **Run exactly once per persistent EBS volume.**
 
-### Phase 1‑a (MacBook)
+### Phase 1-a — Create the persistent EBS
 
-Launch a *temporary CPU EC2* and create the persistent 100 GB EBS.
+**(Run on your MacBook)**
 
 ```bash
-bash phase1a_create_scratch_ebs.sh
+bash phase1a_create_scratch_ebs_final.sh
 ```
 
 What this script does:
 
-* prompts you for a **volume tag** (e.g. `banglab-scratch-xiran`)
-* launches a cheap CPU instance
+* prompts for a **volume tag name**
+* launches a cheap CPU EC2 instance
 * creates:
 
-  * root EBS (small, disposable)
-  * scratch EBS (100 GB, persistent)
+  * a small root EBS (temporary)
+  * a 100GB scratch EBS (**persistent**)
 * tags the scratch EBS
-* **prints the Volume ID** (save this!)
+* prints:
 
-You must remember or record the volume ID:
+  * instance ID
+  * public IPv4
+  * **volume ID (SAVE THIS)**
+
+Record the volume ID somewhere safe:
 
 ```text
-vol-xxxxxxxxxxxxxxxxx
+vol-0xxxxxxxxxxxxxxxx
 ```
 
 ---
 
-### Phase 1‑b (inside EC2)
+### Phase 1-b — Format the EBS (DANGEROUS)
 
-SSH into the temporary instance, then:
+**(Run inside the temporary EC2)**
 
 ```bash
-bash phase1b_format_scratch_ebs.sh
+bash phase1b_format_scratch_ebs_final.sh
 ```
 
 What this script does:
 
-* formats the scratch EBS with `ext4`
+* prompts for the **volume ID**
+* resolves the real Linux device via `/dev/disk/by-id`
+* shows a **dry-run confirmation**
+* formats the volume as `ext4`
 
-⚠️ **This script DESTROYS all data on the disk.**
-⚠️ **Run it exactly once in the disk’s lifetime.**
+⚠️ **This DESTROYS all data on the volume.**
+⚠️ **Run exactly once in the volume’s lifetime.**
 
-After this:
-
-* the disk has a filesystem
-* it is ready forever
-
-Then:
+After this step:
 
 * detach the volume (or just terminate the instance)
 * terminate the CPU instance
 
-Phase 1 is now complete.
+Phase 1 is now complete forever.
 
 ---
 
-## Phase 2 — Daily Workflow (reuse the disk)
+## Phase 2 — Daily Workflow (Reuse the Disk)
 
 > **This is what you do every time you want to work.**
 
----
+### Phase 2-a — Launch EC2 and attach EBS
 
-### Phase 2‑a (MacBook)
-
-Launch a new EC2 instance and attach your existing scratch EBS.
+**(Run on your MacBook)**
 
 ```bash
-bash phase2a_launch_and_attach.sh
+bash phase2a_launch_and_attach_v2.sh
 ```
 
 What this script does:
 
-* prompts you for the **Volume ID**
-* launches a new EC2 (CPU or GPU)
-* attaches the persistent EBS
+* prompts for the **volume ID**
+* launches a new EC2 instance (CPU or GPU)
+* waits for it to be running
+* attaches the EBS
+* prints:
 
-After it finishes:
+  * instance ID
+  * public IPv4
 
-* SSH into the instance
+Next:
+
+```bash
+ssh ubuntu@<PUBLIC_IP>
+```
 
 ---
 
-### Phase 2‑b (inside EC2)
+### Phase 2-b — Mount the EBS safely
 
-Inside the EC2 instance:
+**(Run inside EC2)**
 
 ```bash
-bash phase2b_instance_setup.sh
+bash phase2b_instance_setup_final.sh
 ```
 
 What this script does:
 
-* mounts the persistent EBS at `/home/ubuntu/scratch`
-* sets auto‑mount via `/etc/fstab`
+* prompts for **volume ID**
+* resolves the real block device via `/dev/disk/by-id`
+* shows a **dry-run summary**
+* mounts the EBS at `/home/ubuntu/scratch`
+* adds `/etc/fstab` entry (UUID-based)
+* fixes ownership
 * creates standard directories
-* configures Docker to store images on the EBS
-* configures Apptainer cache on the EBS
-* mounts NVMe SSD if present (optional)
 
-This script is **safe to run every time**.
+This script is **safe to re-run**.
 
 ---
 
-## Docker Usage
+## Phase 3 — Docker Tooling (OPTIONAL)
 
-Docker storage is redirected to:
+Phase 3 is **only for users who want Docker**.
 
-```text
-/home/ubuntu/scratch/docker
-```
+### Phase 3-a — Docker (CPU)
 
-This means:
-
-* Docker images persist across EC2 instances
-* You don’t rebuild images every time
-
-Example bind mount:
+Install Docker and move Docker storage onto the persistent EBS.
 
 ```bash
-docker run -v /home/ubuntu/scratch/datasets:/data ...
+bash phase3a_install_docker_optional.sh
 ```
+
+Use this when:
+
+* you want Docker on CPU or GPU instances
+* you want images to persist across EC2 restarts
 
 ---
 
-## Apptainer Usage
+### Phase 3-b — Docker (GPU)
 
-Apptainer containers are just files.
-
-Recommended location:
-
-```text
-/home/ubuntu/scratch/containers/motionlcm.sif
-```
-
-Example:
+Enable GPU support for Docker.
 
 ```bash
-apptainer exec --nv \
-  /home/ubuntu/scratch/containers/motionlcm.sif \
-  python demo.py
+bash phase3b_enable_gpu_docker_optional.sh
 ```
 
-This works identically on:
+Prerequisites:
 
-* EC2
-* Compute Canada GPU clusters
+* GPU EC2 instance
+* GPU AMI (Deep Learning Base AMI)
+* `nvidia-smi` works
 
----
-
-## Typical Development Pattern
-
-1. Develop & debug on EC2
-2. Stabilize environment
-3. Build Docker image
-4. Push to DockerHub
-5. Convert to Apptainer
-6. Run large experiments on HPC
-
-EC2 = development
-Containers = reproducibility
-HPC = scale
+If you only need CPU Docker, **do not run this step**.
 
 ---
 
-## Safety Rules (important)
+## Safety Rules (memorize these)
 
 ```text
-✔ Format (mkfs) → ONCE, EVER
-✔ Mount → MANY TIMES
-✔ /etc/fstab → PER INSTANCE
-✘ Never re‑format a disk with data
+✔ Format (mkfs) → ONCE EVER
+✔ Volume ID → single source of truth
+✔ Mount via /dev/disk/by-id
+✔ Dry-run before destructive actions
+✘ Never trust nvmeXn1 numbering
+✘ Never re-format a disk with data
 ```
-
-If in doubt, **stop and check `lsblk`**.
 
 ---
 
-## Final Notes
+## Why This Workflow Works
 
-This workflow is intentionally:
+* EC2 instances are disposable
+* EBS holds everything important
+* CPU and GPU paths are explicit
+* Docker is optional, not mandatory
+* GPU enablement is isolated
+* Nothing depends on hidden state
 
-* boring
-* explicit
-* human‑readable
+---
 
-It is designed so that:
+## Final Note
 
-* mistakes are hard to make
-* recovery is always possible
-* future you can understand it in 6 months
+If something feels confusing:
 
-If something feels confusing, that’s a sign the script or README should be improved — not that you should memorize more commands.
+* stop
+* run `lsblk`
+* read the dry-run output
+
+Confusion is a signal to improve scripts — not to memorize more commands.
 
 Happy hacking 🚀

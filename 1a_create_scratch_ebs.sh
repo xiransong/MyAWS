@@ -11,10 +11,13 @@ INSTANCE_TYPE=t3.small        # cheap CPU instance
 KEY_NAME=banglab
 SECURITY_GROUP=banglab
 
+ROOT_SIZE_GB=20
 SCRATCH_SIZE_GB=100
 # ==========================
 
-echo "Enter a tag name for the persistent scratch EBS (e.g. banglab-scratch-xiran):"
+echo
+echo "Enter a tag name for the persistent scratch EBS"
+echo "(e.g. banglab-scratch-xiran):"
 read -r SCRATCH_TAG_NAME
 
 if [[ -z "${SCRATCH_TAG_NAME}" ]]; then
@@ -22,11 +25,15 @@ if [[ -z "${SCRATCH_TAG_NAME}" ]]; then
   exit 1
 fi
 
+echo
 echo "Using volume tag: ${SCRATCH_TAG_NAME}"
 echo
+echo "Launching temporary CPU EC2 instance..."
+echo
 
-echo "=== Launching temporary CPU EC2 ==="
-
+# --------------------------------------------------
+# 1. Launch instance with root + scratch EBS
+# --------------------------------------------------
 INSTANCE_JSON=$(aws ec2 run-instances \
   --region ${AWS_REGION} \
   --placement AvailabilityZone=${AVAILABILITY_ZONE} \
@@ -38,7 +45,7 @@ INSTANCE_JSON=$(aws ec2 run-instances \
     {
       \"DeviceName\": \"/dev/sda1\",
       \"Ebs\": {
-        \"VolumeSize\": 20,
+        \"VolumeSize\": ${ROOT_SIZE_GB},
         \"VolumeType\": \"gp3\",
         \"DeleteOnTermination\": true
       }
@@ -63,9 +70,29 @@ INSTANCE_JSON=$(aws ec2 run-instances \
 INSTANCE_ID=$(echo "${INSTANCE_JSON}" | jq -r '.Instances[0].InstanceId')
 
 echo "Instance ID: ${INSTANCE_ID}"
-sleep 5
+echo "Waiting for instance to enter RUNNING state..."
 
-echo "=== Locating scratch EBS ==="
+aws ec2 wait instance-running \
+  --instance-ids ${INSTANCE_ID} \
+  --region ${AWS_REGION} \
+  --profile ${AWS_PROFILE}
+
+# --------------------------------------------------
+# 2. Retrieve public IPv4
+# --------------------------------------------------
+PUBLIC_IP=$(aws ec2 describe-instances \
+  --instance-ids ${INSTANCE_ID} \
+  --query "Reservations[0].Instances[0].PublicIpAddress" \
+  --output text \
+  --region ${AWS_REGION} \
+  --profile ${AWS_PROFILE})
+
+# --------------------------------------------------
+# 3. Locate scratch EBS volume
+# --------------------------------------------------
+echo
+echo "Locating persistent scratch EBS..."
+
 VOLUME_ID=$(aws ec2 describe-volumes \
   --region ${AWS_REGION} \
   --filters Name=attachment.instance-id,Values=${INSTANCE_ID} \
@@ -74,22 +101,34 @@ VOLUME_ID=$(aws ec2 describe-volumes \
   --profile ${AWS_PROFILE})
 
 if [[ -z "${VOLUME_ID}" ]]; then
-  echo "ERROR: Could not find scratch volume."
+  echo "ERROR: Could not find scratch EBS volume."
   exit 1
 fi
 
-echo "Scratch Volume ID: ${VOLUME_ID}"
-
-echo "=== Tagging scratch volume ==="
+# --------------------------------------------------
+# 4. Tag scratch EBS
+# --------------------------------------------------
 aws ec2 create-tags \
   --resources ${VOLUME_ID} \
   --tags Key=Name,Value=${SCRATCH_TAG_NAME} \
   --region ${AWS_REGION} \
   --profile ${AWS_PROFILE}
 
+# --------------------------------------------------
+# Done
+# --------------------------------------------------
 echo
 echo "======================================"
-echo "PHASE 1-A DONE"
-echo "SAVE THIS VOLUME ID:"
-echo "  ${VOLUME_ID}"
+echo "PHASE 1-A COMPLETE"
+echo
+echo "Instance ID : ${INSTANCE_ID}"
+echo "Public IPv4 : ${PUBLIC_IP}"
+echo
+echo "Persistent EBS:"
+echo "  Volume ID : ${VOLUME_ID}"
+echo "  Tag       : ${SCRATCH_TAG_NAME}"
+echo
+echo "Next steps:"
+echo "  ssh ubuntu@${PUBLIC_IP}"
+echo "  run phase1b_format_scratch_ebs_final.sh"
 echo "======================================"
