@@ -73,5 +73,5 @@ echo
 echo "Next:"
 echo "  Verify GPU Docker with:"
 echo "    docker run --rm --gpus all \\"
-echo "      nvidia/cuda:12.2.0-base-ubuntu22.04 nvidia-smi"
+echo "      nvidia/cuda:11.7.1-cudnn8-runtime-ubuntu22.04 nvidia-smi"
 echo "========================================"

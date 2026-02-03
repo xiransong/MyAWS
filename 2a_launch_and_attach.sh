@@ -9,7 +9,7 @@ AVAILABILITY_ZONE=us-east-1a
 # AMI_ID=ami-0030e4319cbf4dbf2     # Ubuntu 22.04 (ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-20251212)
 AMI_ID=ami-0252d9c82e6b8fa85     # Deep Learning Base AMI with Single CUDA (Ubuntu 22.04) 20260130
 
-INSTANCE_TYPE=g4dn.xlarge
+INSTANCE_TYPE=g4dn.xlarge  # T4 GPU (16GB)
 KEY_NAME=banglab
 SECURITY_GROUP=banglab
 

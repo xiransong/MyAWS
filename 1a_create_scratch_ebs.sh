@@ -129,6 +129,6 @@ echo "  Volume ID : ${VOLUME_ID}"
 echo "  Tag       : ${SCRATCH_TAG_NAME}"
 echo
 echo "Next steps:"
-echo "  ssh ubuntu@${PUBLIC_IP}"
+echo "  ssh to instance"
 echo "  run phase1b_format_scratch_ebs_final.sh"
 echo "======================================"
