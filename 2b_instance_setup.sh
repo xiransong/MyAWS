@@ -99,7 +99,7 @@ sudo chown ubuntu:ubuntu "${SCRATCH_MOUNT}"
 
 echo
 echo "=== Creating standard directories ==="
-mkdir -p "${SCRATCH_MOUNT}"/{repos,datasets,outputs,containers,docker,apptainer-cache}
+mkdir -p "${SCRATCH_MOUNT}"/{repos,data,outputs,transfer}
 
 # --------------------------------------------------
 # Done
