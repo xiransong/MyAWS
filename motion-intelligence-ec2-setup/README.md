@@ -98,7 +98,7 @@ bash 2a_launch_and_attach.sh
 ### Phase 2-b: Mount the EBS safely (inside EC2)
 
 ```bash
-bash 2b_instance_setup.sh
+bash 2b_instance_ebs_setup.sh
 ```
 
 * Resolves device via `/dev/disk/by-id`
@@ -116,7 +116,7 @@ Safe to re-run.
 bash 2c_one-time_install_micromamba.sh
 ```
 
-* Installed at `/home/ubuntu/micromamba`
+* Installed at `/home/ubuntu/scratch/micromamba`
 
 ---
 
@@ -127,3 +127,42 @@ bash 2c_one-time_install_micromamba.sh
 * Mount via `/dev/disk/by-id`
 * Trust GPU AMIs
 * Do not manually install NVIDIA drivers
+
+---
+
+## Phase 3 — Codex on Persistent EBS
+
+### Phase 3-a: One-time persistent Codex setup (inside EC2)
+
+```bash
+bash 3a_one-time_setup_codex_persistence.sh
+```
+
+This creates persistent locations under `/home/ubuntu/scratch` and wires shell init:
+
+* `CODEX_HOME=/home/ubuntu/scratch/.codex`
+* persistent bin paths on `PATH`
+* shared shell config at `/home/ubuntu/scratch/dotfiles/bashrc_shared`
+
+### Phase 3-b: One-time Codex CLI install (inside EC2)
+
+```bash
+bash 3b_one-time_install_codex_cli.sh
+```
+
+Notes:
+
+* Default npm package is `@openai/codex`
+* Override package if needed:
+
+```bash
+CODEX_NPM_PACKAGE="<package-name>" bash 3b_one-time_install_codex_cli.sh
+```
+
+### Phase 3-c: Daily Codex env restore (inside EC2)
+
+```bash
+bash 3c_daily_restore_codex_env.sh
+source ~/.bashrc
+codex --version
+```
