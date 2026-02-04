@@ -146,6 +146,17 @@ This creates persistent locations under `/home/ubuntu/scratch` and wires shell i
 
 ### Phase 3-b: One-time Codex CLI install (inside EC2)
 
+If Node.js/npm are not available, install Node.js persistently on EBS first:
+
+```bash
+bash 3aa_one-time_install_node_on_ebs.sh
+source ~/.bashrc
+node -v
+npm -v
+```
+
+Then install Codex CLI:
+
 ```bash
 bash 3b_one-time_install_codex_cli.sh
 ```
