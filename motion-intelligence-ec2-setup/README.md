@@ -169,6 +169,16 @@ Notes:
 ```bash
 CODEX_NPM_PACKAGE="<package-name>" bash 3b_one-time_install_codex_cli.sh
 ```
+* Reinstall/update an existing Codex CLI:
+
+```bash
+CODEX_FORCE_INSTALL=1 bash 3b_one-time_install_codex_cli.sh
+```
+* Or use the update helper:
+
+```bash
+bash 3bb_update_codex_cli.sh
+```
 
 ### Phase 3-c: Daily Codex env restore (inside EC2)
 
