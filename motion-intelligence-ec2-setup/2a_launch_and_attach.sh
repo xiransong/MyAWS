@@ -13,7 +13,7 @@ INSTANCE_TYPE=g4dn.xlarge  # T4 GPU (16GB)
 KEY_NAME=banglab
 SECURITY_GROUP=banglab
 
-ROOT_SIZE_GB=100
+ROOT_SIZE_GB=500
 # ==========================
 
 echo "Enter the persistent EBS Volume ID (e.g. vol-0abc123...):"
