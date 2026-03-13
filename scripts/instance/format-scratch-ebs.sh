@@ -1,7 +1,15 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-FS_TYPE=ext4
+SCRIPT_DIR="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../../lib/common.sh
+source "${SCRIPT_DIR}/../../lib/common.sh"
+
+FS_TYPE="${FS_TYPE:-ext4}"
+
+require_command ls
+require_command grep
+require_command readlink
 
 echo
 echo "========================================"
@@ -15,10 +23,7 @@ echo
 echo "Enter the EBS Volume ID to FORMAT (e.g. vol-0abc123...):"
 read -r VOLUME_ID
 
-if [[ -z "${VOLUME_ID}" ]]; then
-  echo "ERROR: Volume ID cannot be empty."
-  exit 1
-fi
+[[ -n "${VOLUME_ID}" ]] || die "Volume ID cannot be empty"
 
 VOLUME_ID_NODASH=${VOLUME_ID//-/}
 
@@ -32,9 +37,7 @@ MATCHES=$(ls /dev/disk/by-id/ 2>/dev/null | \
   grep "nvme-Amazon_Elastic_Block_Store_${VOLUME_ID_NODASH}" || true)
 
 if [[ -z "${MATCHES}" ]]; then
-  echo "ERROR: No device found for volume ${VOLUME_ID}"
-  echo "Is the volume attached to this instance?"
-  exit 1
+  die "No device found for volume ${VOLUME_ID}. Is the volume attached to this instance?"
 fi
 
 # Prefer unsuffixed name, fallback otherwise
@@ -65,8 +68,7 @@ echo "========================================"
 read -p "Type YES to FORMAT this volume: " CONFIRM
 
 if [[ "${CONFIRM}" != "YES" ]]; then
-  echo "Aborted by user."
-  exit 1
+  die "Aborted by user"
 fi
 
 # --------------------------------------------------

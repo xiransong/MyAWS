@@ -1,6 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../../lib/common.sh
+source "${SCRIPT_DIR}/../../lib/common.sh"
+
+load_lab_config
+default_scratch_paths
+require_command curl
+require_command tar
+
+if ! mountpoint -q "$SCRATCH_MOUNT"; then
+  die "${SCRATCH_MOUNT} is not mounted. Run scripts/instance/mount-scratch-ebs.sh first."
+fi
+
 echo "============================================================"
 echo "[INFO] Installing micromamba (non-interactive, reproducible)"
 echo "============================================================"
@@ -8,7 +21,7 @@ echo "============================================================"
 ###############################################################################
 # Config
 ###############################################################################
-MAMBA_ROOT_PREFIX="$HOME/scratch/micromamba"
+MAMBA_ROOT_PREFIX="${SCRATCH_MOUNT}/micromamba"
 BIN_DIR="$MAMBA_ROOT_PREFIX/bin"
 MICROMAMBA_BIN="$BIN_DIR/micromamba"
 
@@ -70,15 +83,10 @@ echo "[INFO] Initializing micromamba shell hook (bash)..."
   > "$TMP_DIR/micromamba_hook.sh"
 
 # Install hook idempotently
-if ! grep -q "micromamba shell hook" "$HOME/.bashrc"; then
-  cat >> "$HOME/.bashrc" << EOF
+append_managed_block "$SHARED_BASHRC_PATH" "micromamba shell hook" "export MAMBA_ROOT_PREFIX=\"${MAMBA_ROOT_PREFIX}\"
+$(cat "$TMP_DIR/micromamba_hook.sh")"
 
-# >>> micromamba shell hook >>>
-export MAMBA_ROOT_PREFIX="$MAMBA_ROOT_PREFIX"
-$(cat "$TMP_DIR/micromamba_hook.sh")
-# <<< micromamba shell hook <<<
-EOF
-fi
+ensure_bashrc_sources_shared
 
 ###############################################################################
 # Sanity check

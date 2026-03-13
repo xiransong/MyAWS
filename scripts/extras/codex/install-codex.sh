@@ -1,24 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRATCH="$HOME/scratch"
-NPM_GLOBAL_PREFIX="$SCRATCH/npm-global"
+SCRIPT_DIR="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../../../lib/common.sh
+source "${SCRIPT_DIR}/../../../lib/common.sh"
+
+load_lab_config
+default_scratch_paths
+
+NPM_GLOBAL_PREFIX="${SCRATCH_MOUNT}/npm-global"
 CODEX_NPM_PACKAGE="${CODEX_NPM_PACKAGE:-@openai/codex}"
 
 echo "======================================"
 echo "One-time install: Codex CLI"
 echo "======================================"
 
-if ! mountpoint -q "$SCRATCH"; then
-  echo "[ERROR] $SCRATCH is not mounted."
-  echo "Run 2b_instance_ebs_setup.sh first."
-  exit 1
+if ! mountpoint -q "$SCRATCH_MOUNT"; then
+  die "${SCRATCH_MOUNT} is not mounted. Run scripts/instance/mount-scratch-ebs.sh first."
 fi
 
 if ! command -v npm >/dev/null 2>&1; then
-  echo "[ERROR] npm not found."
-  echo "Install Node.js first, then re-run this script."
-  exit 1
+  die "npm not found. Install Node.js first, then re-run this script."
 fi
 
 CURRENT_CODEX_PATH=""
@@ -45,7 +47,8 @@ echo "[INFO] Installing package: $CODEX_NPM_PACKAGE"
 npm install -g "$CODEX_NPM_PACKAGE"
 
 if [ -x "$NPM_GLOBAL_PREFIX/bin/codex" ]; then
-  ln -sf "$NPM_GLOBAL_PREFIX/bin/codex" "$SCRATCH/bin/codex"
+  mkdir -p "${SCRATCH_MOUNT}/bin"
+  ln -sf "$NPM_GLOBAL_PREFIX/bin/codex" "${SCRATCH_MOUNT}/bin/codex"
 fi
 
 echo

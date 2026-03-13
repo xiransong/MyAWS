@@ -1,31 +1,28 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRATCH="$HOME/scratch"
-TOOLS_ROOT="$SCRATCH/tools/node"
+SCRIPT_DIR="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../../../lib/common.sh
+source "${SCRIPT_DIR}/../../../lib/common.sh"
+
+load_lab_config
+default_scratch_paths
+
+TOOLS_ROOT="${SCRATCH_MOUNT}/tools/node"
 VERSIONS_DIR="$TOOLS_ROOT/versions"
 CURRENT_LINK="$TOOLS_ROOT/current"
-SCRATCH_BIN="$SCRATCH/bin"
+SCRATCH_BIN="${SCRATCH_MOUNT}/bin"
 
 echo "======================================"
 echo "One-time install: Node.js on EBS"
 echo "======================================"
 
-if ! mountpoint -q "$SCRATCH"; then
-  echo "[ERROR] $SCRATCH is not mounted."
-  echo "Run 2b_instance_ebs_setup.sh first."
-  exit 1
+if ! mountpoint -q "$SCRATCH_MOUNT"; then
+  die "${SCRATCH_MOUNT} is not mounted. Run scripts/instance/mount-scratch-ebs.sh first."
 fi
 
-if ! command -v curl >/dev/null 2>&1; then
-  echo "[ERROR] curl not found."
-  exit 1
-fi
-
-if ! command -v python3 >/dev/null 2>&1; then
-  echo "[ERROR] python3 not found."
-  exit 1
-fi
+require_command curl
+require_command python3
 
 ARCH="$(uname -m)"
 case "$ARCH" in

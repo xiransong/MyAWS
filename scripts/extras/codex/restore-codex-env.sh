@@ -1,37 +1,29 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRATCH="$HOME/scratch"
-SHARED_RC="$SCRATCH/dotfiles/bashrc_shared"
-CODEX_HOME_DIR="$SCRATCH/.codex"
-NPM_GLOBAL_PREFIX="$SCRATCH/npm-global"
+SCRIPT_DIR="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../../../lib/common.sh
+source "${SCRIPT_DIR}/../../../lib/common.sh"
+
+load_lab_config
+default_scratch_paths
+
+CODEX_HOME_DIR="${SCRATCH_MOUNT}/.codex"
+NPM_GLOBAL_PREFIX="${SCRATCH_MOUNT}/npm-global"
 
 echo "======================================"
 echo "Daily setup: Codex environment restore"
 echo "======================================"
 
-if ! mountpoint -q "$SCRATCH"; then
-  echo "[ERROR] $SCRATCH is not mounted."
-  echo "Run 2b_instance_ebs_setup.sh first."
-  exit 1
+if ! mountpoint -q "$SCRATCH_MOUNT"; then
+  die "${SCRATCH_MOUNT} is not mounted. Run scripts/instance/mount-scratch-ebs.sh first."
 fi
 
-if [[ ! -f "$SHARED_RC" ]]; then
-  echo "[ERROR] $SHARED_RC not found."
-  echo "Run 3a_one-time_setup_codex_persistence.sh once first."
-  exit 1
+if [[ ! -f "$SHARED_BASHRC_PATH" ]]; then
+  die "${SHARED_BASHRC_PATH} not found. Run scripts/extras/codex/setup-persistence.sh once first."
 fi
 
-if ! grep -q "scratch bashrc_shared" "$HOME/.bashrc"; then
-  cat >> "$HOME/.bashrc" <<'EOF'
-
-# >>> scratch bashrc_shared >>>
-if [ -f "$HOME/scratch/dotfiles/bashrc_shared" ]; then
-  source "$HOME/scratch/dotfiles/bashrc_shared"
-fi
-# <<< scratch bashrc_shared <<<
-EOF
-fi
+ensure_bashrc_sources_shared
 
 mkdir -p "$CODEX_HOME_DIR"
 
