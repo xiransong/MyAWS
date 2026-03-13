@@ -3,7 +3,7 @@
 ## Config File Not Found
 
 If a script says `config/lab.env` is missing:
-- copy [config/lab.env.example](/home/ubuntu/scratch/repos/MyAWS/config/lab.env.example) to `config/lab.env`
+- copy [config/lab.env.example](../config/lab.env.example) to `config/lab.env`
 - fill in the required values
 - or set `MYAWS_CONFIG_FILE` to an alternate config path
 
@@ -17,8 +17,8 @@ If the mount or format script cannot find the EBS volume:
 ## Shared Shell Does Not Load
 
 If `source ~/.bashrc` does not expose the shared environment:
-- confirm [scripts/instance/setup-shared-shell.sh](/home/ubuntu/scratch/repos/MyAWS/scripts/instance/setup-shared-shell.sh) has created `${HOME}/scratch/dotfiles/bashrc_shared` or the configured equivalent
-- confirm [scripts/instance/bootstrap-user-shell.sh](/home/ubuntu/scratch/repos/MyAWS/scripts/instance/bootstrap-user-shell.sh) has updated `~/.bashrc`
+- confirm [scripts/instance/setup-shared-shell.sh](../scripts/instance/setup-shared-shell.sh) has created `${HOME}/scratch/dotfiles/bashrc_shared` or the configured equivalent
+- confirm [scripts/instance/bootstrap-user-shell.sh](../scripts/instance/bootstrap-user-shell.sh) has updated `~/.bashrc`
 - inspect `~/.bashrc` for the `myaws shared shell` block
 
 ## GitHub Access
@@ -29,4 +29,4 @@ Preferred options:
 - `gh auth login`
 - user-managed SSH keys created directly on the instance
 
-Reference: [scripts/instance/setup-github-auth.sh](/home/ubuntu/scratch/repos/MyAWS/scripts/instance/setup-github-auth.sh)
+Reference: [scripts/instance/setup-github-auth.sh](../scripts/instance/setup-github-auth.sh)

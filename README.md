@@ -20,20 +20,22 @@ scripts/extras/codex/  Optional Codex setup on the persistent EBS
 
 ## First-Time Setup
 
-1. Copy `config/lab.env.example` to `config/lab.env`.
-2. Fill in your AWS profile, region, key pair, security group, and AMI IDs.
-3. Read [docs/onboarding.md](/home/ubuntu/scratch/repos/MyAWS/docs/onboarding.md).
+1. Fork or clone this repo on your local machine.
+2. Copy `config/lab.env.example` to `config/lab.env`.
+3. Fill in your AWS profile, region, key pair, security group, and AMI IDs.
+4. Read [docs/onboarding.md](docs/onboarding.md).
 
 ## Daily Workflow
 
-The main path is documented in [docs/workflow.md](/home/ubuntu/scratch/repos/MyAWS/docs/workflow.md).
+The main path is documented in [docs/workflow.md](docs/workflow.md).
 
 At a high level:
-1. Create the persistent scratch EBS once with [scripts/local/create-scratch-ebs.sh](/home/ubuntu/scratch/repos/MyAWS/scripts/local/create-scratch-ebs.sh).
-2. Format it once from inside the bootstrap instance with [scripts/instance/format-scratch-ebs.sh](/home/ubuntu/scratch/repos/MyAWS/scripts/instance/format-scratch-ebs.sh).
-3. Launch work instances with [scripts/local/launch-and-attach.sh](/home/ubuntu/scratch/repos/MyAWS/scripts/local/launch-and-attach.sh).
-4. Mount the scratch volume inside EC2 with [scripts/instance/mount-scratch-ebs.sh](/home/ubuntu/scratch/repos/MyAWS/scripts/instance/mount-scratch-ebs.sh).
-5. Bootstrap a shared shell with [scripts/instance/setup-shared-shell.sh](/home/ubuntu/scratch/repos/MyAWS/scripts/instance/setup-shared-shell.sh) and [scripts/instance/bootstrap-user-shell.sh](/home/ubuntu/scratch/repos/MyAWS/scripts/instance/bootstrap-user-shell.sh).
+1. Create the persistent scratch EBS once with [scripts/local/create-scratch-ebs.sh](scripts/local/create-scratch-ebs.sh).
+2. SSH to the bootstrap instance and format the new volume once with [scripts/instance/format-scratch-ebs.sh](scripts/instance/format-scratch-ebs.sh).
+3. Launch work instances with [scripts/local/launch-and-attach.sh](scripts/local/launch-and-attach.sh).
+4. Add the current public IP to your local `~/.ssh/config`, then `ssh` into the instance.
+5. Inside EC2, clone this repo on the instance, run [scripts/instance/mount-scratch-ebs.sh](scripts/instance/mount-scratch-ebs.sh), then keep a copy under `~/scratch/repos` for reuse.
+6. Bootstrap a shared shell with [scripts/instance/setup-shared-shell.sh](scripts/instance/setup-shared-shell.sh) and [scripts/instance/bootstrap-user-shell.sh](scripts/instance/bootstrap-user-shell.sh).
 
 ## Dotfiles Policy
 
@@ -44,4 +46,4 @@ Instead:
 - each user opts into sourcing that shared config from their own `~/.bashrc`
 - GitHub auth stays user-scoped via `gh auth login` or a user-managed SSH key
 
-See [scripts/instance/setup-github-auth.sh](/home/ubuntu/scratch/repos/MyAWS/scripts/instance/setup-github-auth.sh) and [docs/troubleshooting.md](/home/ubuntu/scratch/repos/MyAWS/docs/troubleshooting.md).
+See [scripts/instance/setup-github-auth.sh](scripts/instance/setup-github-auth.sh) and [docs/troubleshooting.md](docs/troubleshooting.md).

@@ -8,15 +8,30 @@
 bash scripts/local/create-scratch-ebs.sh
 ```
 
-2. SSH into the bootstrap instance printed by the script.
+2. Add the printed bootstrap instance IP to your local `~/.ssh/config`:
 
-3. Format the attached scratch volume once:
+```sshconfig
+Host ec2-bootstrap
+  HostName <bootstrap-public-ip>
+  User ubuntu
+  IdentityFile ~/.ssh/your-key
+```
+
+3. SSH into the bootstrap instance:
 
 ```bash
+ssh ec2-bootstrap
+```
+
+4. Clone this repo inside EC2 if needed, then format the attached scratch volume once:
+
+```bash
+git clone <your-fork-url>
+cd <repo-dir>
 bash scripts/instance/format-scratch-ebs.sh
 ```
 
-4. Detach the volume and terminate the bootstrap instance when done.
+5. Detach the volume and terminate the bootstrap instance when done.
 
 ## Per Work Session
 
@@ -26,15 +41,44 @@ bash scripts/instance/format-scratch-ebs.sh
 bash scripts/local/launch-and-attach.sh
 ```
 
-2. SSH into the new instance.
+2. Update your local `~/.ssh/config` for the work instance:
 
-3. Mount the scratch volume:
+```sshconfig
+Host ec2-work
+  HostName <work-public-ip>
+  User ubuntu
+  IdentityFile ~/.ssh/your-key
+```
+
+3. SSH into the new instance:
+
+```bash
+ssh ec2-work
+```
+
+4. Clone this repo on the instance so you can run the mount script:
+
+```bash
+git clone <your-fork-url>
+cd <repo-dir>
+```
+
+5. Mount the scratch volume:
 
 ```bash
 bash scripts/instance/mount-scratch-ebs.sh
 ```
 
-4. Set up the shared shell once per user account on that EBS:
+6. If the repo is not already on the scratch volume, clone it there for persistence:
+
+```bash
+mkdir -p ~/scratch/repos
+cd ~/scratch/repos
+git clone <your-fork-url>
+cd <repo-dir>
+```
+
+7. Set up the shared shell once per user account on that EBS:
 
 ```bash
 bash scripts/instance/setup-shared-shell.sh
