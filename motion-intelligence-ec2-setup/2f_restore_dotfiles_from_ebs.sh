@@ -40,6 +40,17 @@ if [[ -f "$SSH_SRC/id_ed25519.pub" ]]; then
 fi
 
 ###############################################################################
+# Restore TeX Live environment
+###############################################################################
+if [[ -f "$DOTFILES/texlive-env" ]]; then
+  echo "[INFO] Restoring ~/.texlive-env"
+  cp "$DOTFILES/texlive-env" ~/.texlive-env
+  chmod 644 ~/.texlive-env
+else
+  echo "[WARN] No texlive-env found in $DOTFILES"
+fi
+
+###############################################################################
 # Final message
 ###############################################################################
 echo
